@@ -24,10 +24,8 @@ config CPU_FREQ_STAT
 	help
 	  This driver exports CPU frequency statistics information through sysfs
 	  file system.
-
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_stats.
-
 	  If in doubt, say N.
 
 config CPU_FREQ_STAT_DETAILS
@@ -36,7 +34,6 @@ config CPU_FREQ_STAT_DETAILS
 	help
 	  This will show detail CPU frequency translation table in sysfs file
 	  system.
-
 	  If in doubt, say N.
 
 choice
