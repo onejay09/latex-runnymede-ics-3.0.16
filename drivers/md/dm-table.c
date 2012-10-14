@@ -1185,15 +1185,16 @@ static void dm_table_set_integrity(struct dm_table *t)
 
 	template_disk = dm_table_get_integrity_disk(t, true);
 	if (template_disk)
-		blk_integrity_register(dm_disk(t->md),
-				       blk_get_integrity(template_disk));
-	else if (blk_integrity_is_initialized(dm_disk(t->md)))
-		DMWARN("%s: device no longer has a valid integrity profile",
-		       dm_device_name(t->md));
-	else
-		DMWARN("%s: unable to establish an integrity profile",
-		       dm_device_name(t->md));
-}
+		#if defined(CONFIG_BLK_DEV_INTEGRITY)
+   			blk_integrity_register(dm_disk(t->md),
+ 				bdev_get_integrity(prev->dm_dev.bdev));
+ 	 	#endif
+ 			return;
+ 	 	#if defined(CONFIG_BLK_DEV_INTEGRITY)
+ 			blk_integrity_register(dm_disk(t->md), NULL);
+ 		#endif
+ 			return;
+ 	 	}
 
 void dm_table_set_restrictions(struct dm_table *t, struct request_queue *q,
 			       struct queue_limits *limits)

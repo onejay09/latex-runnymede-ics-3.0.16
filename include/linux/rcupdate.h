@@ -839,6 +839,13 @@ static inline void __rcu_reclaim(struct rcu_head *head)
 		head->func(head);
 }
 
+#define rcu_assign_pointer_nonull(p, v) \
+		({ \
+			if (!__builtin_constant_p(v)) \
+				smp_wmb(); \
+			(p) = (v); \
+		})
+
 /**
  * kfree_rcu() - kfree an object after a grace period.
  * @ptr:	pointer to kfree

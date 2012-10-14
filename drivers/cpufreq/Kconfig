@@ -103,13 +103,6 @@ config CPU_FREQ_DEFAULT_GOV_INTERACTIVE
 	  loading your cpufreq low-level hardware driver, using the
 	  'interactive' governor for latency-sensitive workloads.
 
-config CPU_FREQ_DEFAULT_GOV_SMARTASS
-	bool "smartass"
-	select CPU_FREQ_GOV_SMARTASS
-	select CPU_FREQ_GOV_PERFORMANCE
-	help
-	  Use the CPUFreq governor 'smartass' as default.
-
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -193,13 +186,6 @@ config CPU_FREQ_GOV_CONSERVATIVE
 	  To compile this driver as a module, choose M here: the
 	  module will be called cpufreq_conservative.
 	  For details, take a look at linux/Documentation/cpu-freq.
-	  If in doubt, say N.
-
-config CPU_FREQ_GOV_SMARTASS
-	tristate "'smartass' cpufreq governor"
-	depends on CPU_FREQ
-	help
-	  smartass' - a "smart" optimized governor!
 	  If in doubt, say N.
 
 menu "x86 CPU frequency scaling drivers"
