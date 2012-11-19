@@ -2,4 +2,4 @@ export ARCH=arm
 export CROSS_COMPILE=~/kernel/toolchain/arm-linux-androideabi-4.6/prebuilt/linux-x86/bin/arm-linux-androideabi-
 make menuconfig
 make -j5
-
+make CFLAGS_MODULE=-fno-pic modules
