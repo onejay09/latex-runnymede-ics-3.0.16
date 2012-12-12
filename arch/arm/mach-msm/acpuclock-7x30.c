@@ -516,27 +516,27 @@ struct acpuclk_soc_data acpuclk_7x30_soc_data __initdata = {
 
 #ifdef CONFIG_CPU_FREQ_VDD_LEVELS
 
-	ssize_t acpuclk_get_vdd_levels_str(char *buf)
-	{
+ssize_t acpuclk_get_vdd_levels_str(char *buf)
+{
 	int i, len = 0;
 	if (buf)
 	{
 		mutex_lock(&drv_state.lock);
-	for (i = 0; acpu_freq_tbl[i].acpu_clk_khz; i++)
-	{
-		len += sprintf(buf + len, "%8u: %4d\n", acpu_freq_tbl[i].acpu_clk_khz, acpu_freq_tbl[i].vdd_mv);
-	}
+		for (i = 0; acpu_freq_tbl[i].acpu_clk_khz; i++)
+		{
+			len += sprintf(buf + len, "%8u: %4d\n", acpu_freq_tbl[i].acpu_clk_khz, acpu_freq_tbl[i].vdd_mv);
+		}
 		mutex_unlock(&drv_state.lock);
 	}
 	return len;
-	}
+}
 
 void acpuclk_set_vdd(unsigned int khz, int vdd)
-	{
-int i;
-unsigned int new_vdd;
-		vdd = vdd / V_STEP * V_STEP;
-		mutex_lock(&drv_state.lock);
+{
+	int i;
+	unsigned int new_vdd;
+	vdd = vdd / V_STEP * V_STEP;
+	mutex_lock(&drv_state.lock);
 	for (i = 0; acpu_freq_tbl[i].acpu_clk_khz; i++)
 	{
 	if (khz == 0)
@@ -549,7 +549,7 @@ unsigned int new_vdd;
 		acpu_freq_tbl[i].vdd_raw = VDD_RAW(new_vdd);
 	}
 		mutex_unlock(&drv_state.lock);
-	}
+}
 
 #endif
 

@@ -628,7 +628,6 @@ static ssize_t store_vdd_levels(struct cpufreq_policy *policy, const char *buf, 
 
 #endif
 
-
 /**
  * show_scaling_driver - show the current cpufreq HW/BIOS limitation
  */
