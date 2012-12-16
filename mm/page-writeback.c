@@ -734,15 +734,15 @@ static void balance_dirty_pages(struct address_space *mapping,
 		 * Only move pages to writeback if this bdi is over its
 		 * threshold otherwise wait until the disk writes catch
 		 * up.
-		 */
+		 
 		trace_balance_dirty_start(bdi);
 		if (bdi_nr_reclaimable > task_bdi_thresh) {
 			pages_written += writeback_inodes_wb(&bdi->wb,
 							     write_chunk);
 			trace_balance_dirty_written(bdi, pages_written);
 			if (pages_written >= write_chunk)
-				break;		/* We've done our duty */
-		}
+				break;		
+		} */
 		__set_current_state(TASK_UNINTERRUPTIBLE);
 		io_schedule_timeout(pause);
 		trace_balance_dirty_wait(bdi);
@@ -898,8 +898,7 @@ void laptop_mode_timer_fn(unsigned long data)
 	 * threshold
 	 */
 	if (bdi_has_dirty_io(&q->backing_dev_info))
-		bdi_start_writeback(&q->backing_dev_info, nr_pages,
-					WB_REASON_LAPTOP_TIMER);
+		bdi_start_writeback(&q->backing_dev_info, nr_pages);
 }
 
 /*
