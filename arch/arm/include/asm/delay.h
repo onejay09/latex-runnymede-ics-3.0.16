@@ -43,5 +43,68 @@ extern void __const_udelay(unsigned long);
 extern void set_delay_fn(void (*fn)(unsigned long));
 extern void read_current_timer_delay_loop(unsigned long loops);
 
+/*
+ * This function intentionally does not exist; if you see references to
+ * it, it means that you're calling ndelay() with an out of range value.
+ *
+ * With currently imposed limits, this means that we support a max delay
+ * of 999999ns. Further limits: HZ<=1000 and bogomips<=8589934
+ */
+extern void __bad_ndelay(void);
+
+extern void __ndelay(unsigned long usecs);
+extern void __const_ndelay(unsigned long);
+
+#define MAX_NDELAY			999999
+#define NS_TO_JIFFY_LSHIFT_32(n)	((((u64)(n)*HZ)<<32)/1000000000)
+
+#define ndelay(n)							\
+	(__builtin_constant_p(n) ?					\
+	  ((n) > MAX_NDELAY ? __bad_ndelay() :				\
+			__const_ndelay(NS_TO_JIFFY_LSHIFT_32(n))) :	\
+	  __ndelay(n))
+
+/*
+ * This function intentionally does not exist; if you see references to
+ * it, it means that you're calling ndelay() with an out of range value.
+ *
+ * With currently imposed limits, this means that we support a max delay
+ * of 999999ns. Further limits: HZ<=1000 and bogomips<=8589934
+ */
+extern void __bad_ndelay(void);
+
+extern void __ndelay(unsigned long usecs);
+extern void __const_ndelay(unsigned long);
+
+#define MAX_NDELAY			999999
+#define NS_TO_JIFFY_LSHIFT_32(n)	((((u64)(n)*HZ)<<32)/1000000000)
+
+#define ndelay(n)							\
+	(__builtin_constant_p(n) ?					\
+	  ((n) > MAX_NDELAY ? __bad_ndelay() :				\
+			__const_ndelay(NS_TO_JIFFY_LSHIFT_32(n))) :	\
+	  __ndelay(n))
+
+/*
+ * This function intentionally does not exist; if you see references to
+ * it, it means that you're calling ndelay() with an out of range value.
+ *
+ * With currently imposed limits, this means that we support a max delay
+ * of 999999ns. Further limits: HZ<=1000 and bogomips<=8589934
+ */
+extern void __bad_ndelay(void);
+
+extern void __ndelay(unsigned long usecs);
+extern void __const_ndelay(unsigned long);
+
+#define MAX_NDELAY			999999
+#define NS_TO_JIFFY_LSHIFT_32(n)	((((u64)(n)*HZ)<<32)/1000000000)
+
+#define ndelay(n)							\
+	(__builtin_constant_p(n) ?					\
+	  ((n) > MAX_NDELAY ? __bad_ndelay() :				\
+			__const_ndelay(NS_TO_JIFFY_LSHIFT_32(n))) :	\
+	  __ndelay(n))
+
 #endif /* defined(_ARM_DELAY_H) */
 

@@ -52,6 +52,10 @@ extern void fpundefinstr(void);
 
 EXPORT_SYMBOL(__backtrace);
 
+	/* platform dependent support */
+EXPORT_SYMBOL(__ndelay);
+EXPORT_SYMBOL(__const_ndelay);
+
 	/* networking */
 EXPORT_SYMBOL(csum_partial);
 EXPORT_SYMBOL(csum_partial_copy_from_user);
