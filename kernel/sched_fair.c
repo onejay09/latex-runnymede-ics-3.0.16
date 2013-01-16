@@ -91,8 +91,6 @@ unsigned int __read_mostly sysctl_sched_shares_window = 10000000UL;
 
 static const struct sched_class fair_sched_class;
 
-static unsigned long __read_mostly max_load_balance_interval = HZ/10;
-
 /**************************************************************
  * CFS operations on generic schedulable entities:
  */
@@ -2250,6 +2248,8 @@ static bool yield_to_task_fair(struct rq *rq, struct task_struct *p, bool preemp
 /**************************************************
  * Fair scheduling class load-balancing methods:
  */
+
+static unsigned long __read_mostly max_load_balance_interval = HZ/10; 
 
 /*
  * pull_task - move a task from a remote runqueue to the local runqueue.
