@@ -733,6 +733,8 @@ static int compact_nodes(void)
 
 	for_each_online_node(nid)
 		compact_node(nid);
+
+	return 0;
 }
 
 /* The written value is actually unused, all memory is compacted */
