@@ -2853,7 +2853,12 @@ static struct clk_local_ownership {
 	OWN(ROW2,  1, "iface_clk",	spi_p_clk,	"spi_qsd.0"),
 	OWN(ROW2,  9, "core_clk",	uart1_clk,	"msm_serial.0"),
 	OWN(ROW2,  6, "core_clk",	uart1dm_clk,	"msm_serial_hs.0"),
+#ifdef CONFIG_SERIAL_MSM_HS
 	OWN(ROW2,  6, "core_clk",	uart1dm_clk,	"msm_serial_hs_brcm.0"),/* for brcm BT */
+#endif
+#ifdef CONFIG_SERIAL_MSM_HS_LPM
+	OWN(ROW2,  6, "core_clk",	uart1dm_clk,	"msm_serial_hs_brcm_lpm.0"),/* for brcm lpm BT */
+#endif
 	OWN(ROW2,  8, "core_clk",	uart2dm_clk,	"msm_serial_hs.1"),
 	OWN(ROW2, 11, "alt_core_clk",	usb_hs_clk,	"msm_otg"),
 	OWN(ROW2, 11, "core_clk",	usb_hs_core_clk, "msm_otg"),
@@ -2887,9 +2892,14 @@ static struct clk_local_ownership {
 	OWN(GLBL, 13, "iface_clk",	rotator_p_clk,	"footswitch-pcom.6"),
 	{ CLK_LOOKUP("iface_clk",     uart1dm_p_clk.c, "msm_serial_hs.0"),
 		O(GLBL), BIT(8), &dummy_clk },
+#ifdef CONFIG_SERIAL_MSM_HS
 	{ CLK_LOOKUP("iface_clk",     uart1dm_p_clk.c, "msm_serial_hs_brcm.0"),/* for brcm BT */
 		O(GLBL), BIT(8), &dummy_clk },
-
+#endif
+#ifdef CONFIG_SERIAL_MSM_HS_LPM
+	{ CLK_LOOKUP("iface_clk",     uart1dm_p_clk.c, "msm_serial_hs_brcm_lpm.0"),/* for brcm BT */
+		O(GLBL), BIT(8), &dummy_clk },
+#endif
 	{ CLK_LOOKUP("iface_clk",     uart2dm_p_clk.c, "msm_serial_hs.1"),
 		O(GLBL), BIT(8), &dummy_clk },
 };
