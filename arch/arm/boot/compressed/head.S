@@ -617,6 +617,12 @@ __setup_mmu:	sub	r3, r4, #16384		@ Page directory size
 		mov	pc, lr
 ENDPROC(__setup_mmu)
 
+__arm926ejs_mmu_cache_on:	  	
+#ifdef CONFIG_CPU_DCACHE_WRITETHROUGH	  	
+    mov  r0, #4      @ put dcache in WT mode	  	
+    mcr  p15, 7, r0, c15, c0, 0	  	
+#endif
+
 @ Enable unaligned access on v6, to allow better code generation
 @ for the decompressor C code:
 __armv6_mmu_cache_on:
