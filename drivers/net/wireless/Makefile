@@ -61,7 +61,11 @@ obj-$(CONFIG_IWM)	+= iwmc3200wifi/
 
 obj-$(CONFIG_MWIFIEX)	+= mwifiex/
 
-obj-$(CONFIG_BCMDHD)	+= bcmdhd/
+ifeq ($(CONFIG_BCMDHD_GOOGLE),y)
+    obj-$(CONFIG_BCMDHD)	+= bcmdhd/
+else
+    obj-$(CONFIG_BCMDHD)  += bcmdhd_htc/
+endif 
 
 obj-$(CONFIG_LIBRA_SDIOIF)	+= libra/
 obj-$(CONFIG_WCNSS_CORE)	+= wcnss/
