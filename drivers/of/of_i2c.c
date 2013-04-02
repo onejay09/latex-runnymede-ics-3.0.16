@@ -17,6 +17,7 @@
 #include <linux/of_i2c.h>
 #include <linux/of_irq.h>
 #include <linux/module.h>
+#include <linux/irqdomain.h>
 
 void of_i2c_register_devices(struct i2c_adapter *adap)
 {

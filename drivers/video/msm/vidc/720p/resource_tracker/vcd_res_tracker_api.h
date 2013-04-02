@@ -16,6 +16,7 @@
 #include "vcd_core.h"
 
 void res_trk_init(struct device *device, u32 irq);
+u32 res_trk_get_ion_flags(void);
 u32 res_trk_power_up(void);
 u32 res_trk_power_down(void);
 u32 res_trk_enable_clocks(void);

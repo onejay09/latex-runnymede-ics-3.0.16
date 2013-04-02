@@ -823,7 +823,7 @@ static u32 vid_dec_set_h264_mv_buffers(struct video_client_ctx *client_ctx,
 		}
 		put_pmem_file(file);
 	} else {
-		client_ctx->h264_mv_ion_handle = ion_import_fd(
+		client_ctx->h264_mv_ion_handle = ion_import_dma_buf(
 					client_ctx->user_ion_client,
 					vcd_h264_mv_buffer->pmem_fd);
 		if (!client_ctx->h264_mv_ion_handle) {
@@ -1675,7 +1675,7 @@ static long vid_dec_ioctl(struct file *file,
 			}
 			put_pmem_file(pmem_file);
 		} else {
-			client_ctx->seq_hdr_ion_handle = ion_import_fd(
+			client_ctx->seq_hdr_ion_handle = ion_import_dma_buf(
 				client_ctx->user_ion_client,
 				seq_header.pmem_fd);
 			if (!client_ctx->seq_hdr_ion_handle) {

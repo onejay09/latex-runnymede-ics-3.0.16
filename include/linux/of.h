@@ -196,12 +196,23 @@ extern struct property *of_find_property(const struct device_node *np,
 					 const char *name,
 					 int *lenp);
 extern int of_property_read_u32_array(const struct device_node *np,
-				      char *propname,
+				      const char *propname,
 				      u32 *out_values,
 				      size_t sz);
+extern int of_property_read_u64(const struct device_node *np,
+				const char *propname, u64 *out_value);
 
-extern int of_property_read_string(struct device_node *np, char *propname,
-					const char **out_string);
+extern int of_property_read_string(struct device_node *np,
+				   const char *propname,
+				   const char **out_string);
+extern int of_property_read_string_index(struct device_node *np,
+					 const char *propname,
+					 int index, const char **output);
+extern int of_property_match_string(struct device_node *np,
+				    const char *propname,
+				    const char *string);
+extern int of_property_count_strings(struct device_node *np,
+				     const char *propname);
 extern int of_device_is_compatible(const struct device_node *device,
 				   const char *);
 extern int of_device_is_available(const struct device_node *device);
@@ -242,13 +253,28 @@ static inline bool of_have_populated_dt(void)
 }
 
 static inline int of_property_read_u32_array(const struct device_node *np,
-				char *propname, u32 *out_values, size_t sz)
+					     const char *propname,
+					     u32 *out_values, size_t sz)
 {
 	return -ENOSYS;
 }
 
 static inline int of_property_read_string(struct device_node *np,
-				char *propname, const char **out_string)
+					  const char *propname,
+					  const char **out_string)
+{
+	return -ENOSYS;
+}
+
+static inline int of_property_read_string_index(struct device_node *np,
+						const char *propname, int index,
+						const char **out_string)
+{
+	return -ENOSYS;
+}
+
+static inline int of_property_count_strings(struct device_node *np,
+					    const char *propname)
 {
 	return -ENOSYS;
 }
@@ -260,10 +286,16 @@ static inline const void *of_get_property(const struct device_node *node,
 	return NULL;
 }
 
+static inline int of_property_read_u64(const struct device_node *np,
+				       const char *propname, u64 *out_value)
+{
+	return -ENOSYS;
+}
+
 #endif /* CONFIG_OF */
 
 static inline int of_property_read_u32(const struct device_node *np,
-				       char *propname,
+				       const char *propname,
 				       u32 *out_value)
 {
 	return of_property_read_u32_array(np, propname, out_value, 1);

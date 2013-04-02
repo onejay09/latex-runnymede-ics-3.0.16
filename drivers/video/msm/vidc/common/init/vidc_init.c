@@ -504,7 +504,7 @@ u32 vidc_insert_addr_table(struct video_client_ctx *client_ctx,
 			}
 			put_pmem_file(file);
 		} else {
-			buff_ion_handle = ion_import_fd(
+			buff_ion_handle = ion_import_dma_buf(
 				client_ctx->user_ion_client, pmem_fd);
 			if (IS_ERR_OR_NULL(buff_ion_handle)) {
 				ERR("%s(): get_ION_handle failed\n",

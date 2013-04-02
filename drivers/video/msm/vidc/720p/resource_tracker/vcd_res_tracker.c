@@ -723,6 +723,11 @@ u32 res_trk_get_enable_ion(void)
 	return 0;
 }
 
+u32 res_trk_get_ion_flags(void)
+{
+	return 0;
+}
+
 struct ion_client *res_trk_get_ion_client(void)
 {
 	return NULL;
