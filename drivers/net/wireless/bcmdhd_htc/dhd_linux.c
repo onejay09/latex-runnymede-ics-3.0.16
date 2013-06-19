@@ -335,7 +335,7 @@ module_param(dhd_watchdog_ms, uint, 0);
 
 #if defined(DHD_DEBUG)
 /* Console poll interval */
-uint dhd_console_ms = 250;
+uint dhd_console_ms = 0;//250;
 module_param(dhd_console_ms, uint, 0644);
 #endif /* defined(DHD_DEBUG) */
 
@@ -535,7 +535,7 @@ static int dhd_sleep_pm_callback(struct notifier_block *nfb, unsigned long actio
 
 static struct notifier_block dhd_sleep_pm_notifier = {
 	.notifier_call = dhd_sleep_pm_callback,
-	.priority = 0
+	.priority = 10
 };
 extern int register_pm_notifier(struct notifier_block *nb);
 extern int unregister_pm_notifier(struct notifier_block *nb);
@@ -576,6 +576,7 @@ extern int wl_pattern_atoh(char *src, char *dst);
 static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 {
 	int is_screen_off = value;
+	int ret = 0;
 /* HTC_CSP_START */
 #ifdef BCM4329_LOW_POWER
 	int ignore_bcmc = 1;
@@ -607,7 +608,10 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 				/* ignore broadcast and multicast packet*/
 				bcm_mkiovar("pm_ignore_bcmc", (char *)&ignore_bcmc,
 					4, iovbuf, sizeof(iovbuf));
-				dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+				ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+				if (ret < 0) {
+					DHD_ERROR(("%s: can't set pm_ignore , error=%d\n", __func__, ret));					
+				}				
 				/* keep alive packet*/
 				dhd_set_keepalive(1);
 			}
@@ -618,6 +622,8 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 				/* Kernel suspended */
 				DHD_TRACE(("%s: force extra Suspend setting \n", __FUNCTION__));
 
+				/* Enable packet filter, only allow unicast packet to send up */
+				dhd_set_packet_filter(1, dhd);
 #ifdef PNO_SUPPORT
 				/* set pfn */
 				dhd_set_pfn(dhd, 1);
@@ -640,6 +646,8 @@ static int dhd_set_suspend(int value, dhd_pub_t *dhd)
 				/* Kernel resumed  */
 				DHD_TRACE(("%s: Remove extra suspend setting \n", __FUNCTION__));
 
+				/* disable pkt filter */
+				dhd_set_packet_filter(0, dhd);
 #ifdef PNO_SUPPORT
 				dhd_set_pfn(dhd, 0);
 #endif
@@ -1252,7 +1260,13 @@ dhd_op_if(dhd_if_t *ifp)
 				ret = -EOPNOTSUPP;
 			} else {
 #if defined(SOFTAP)
+//BRCM APSTA START
+	#ifndef APSTA_CONCURRENT
+//BRCM APSTA END
 		if (ap_fw_loaded && !(dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)) {
+//BRCM APSTA START
+	#endif
+//BRCM APSTA END
 				 /* semaphore that the soft AP CODE waits on */
 				flags = dhd_os_spin_lock(&dhd->pub);
 
@@ -1261,7 +1275,13 @@ dhd_op_if(dhd_if_t *ifp)
 				 /* signal to the SOFTAP 'sleeper' thread, wl0.1 is ready */
 				up(&ap_eth_ctl.sema);
 				dhd_os_spin_unlock(&dhd->pub, flags);
+//BRCM APSTA START
+	#ifndef APSTA_CONCURRENT
+//BRCM APSTA END
 		}
+//BRCM APSTA START
+	#endif
+//BRCM APSTA END
 #endif
 				DHD_TRACE(("\n ==== pid:%x, net_device for if:%s created ===\n\n",
 					current->pid, ifp->net->name));
@@ -1276,6 +1296,8 @@ dhd_op_if(dhd_if_t *ifp)
 		if (ifp->net != NULL) {
 			DHD_TRACE(("\n%s: got 'DHD_IF_DEL' state\n", __FUNCTION__));
 #ifdef WL_CFG80211
+            /* Even APSTA concurrent running, we still need to pass the if del info 
+               to cfg80211 for sync state flags. */
 			if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211) {
 				wl_cfg80211_notify_ifdel(ifp->net);
 			}
@@ -1299,16 +1321,17 @@ dhd_op_if(dhd_if_t *ifp)
 	if (ret < 0) {
 		ifp->set_multicast = FALSE;
 		if (ifp->net) {
+#ifdef SOFTAP
+			flags = dhd_os_spin_lock(&dhd->pub);
+			if (ifp->net == ap_net_dev) {
+				ap_net_dev = NULL;   /*  NULL  SOFTAP global wl0.1 as well */
+			}
+			dhd_os_spin_unlock(&dhd->pub, flags);
+#endif /*  SOFTAP */
 			free_netdev(ifp->net);
 			ifp->net = NULL;
 		}
 		dhd->iflist[ifp->idx] = NULL;
-#ifdef SOFTAP
-		flags = dhd_os_spin_lock(&dhd->pub);
-		if (ifp->net == ap_net_dev)
-			ap_net_dev = NULL;   /*  NULL  SOFTAP global wl0.1 as well */
-		dhd_os_spin_unlock(&dhd->pub, flags);
-#endif /*  SOFTAP */
 		MFREE(dhd->pub.osh, ifp, sizeof(*ifp));
 	}
 }
@@ -1652,7 +1675,7 @@ dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 		/* if the consequent event number is over maximum number, just send HANG event. */
 		if ( txq_full_event_num >= MAX_TXQ_FULL_EVENT ) {
 			txq_full_event_num = 0;
-			net_os_send_hang_message(net);
+			//net_os_send_hang_message(net); //[Broadcom 0410]Mark this line to prevent out of txq trigger hand event send out from driver
 		}
 	}
 	else {
@@ -1722,7 +1745,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 	int i;
 	dhd_if_t *ifp;
 	wl_event_msg_t event;
-	int tout = DHD_PACKET_TIMEOUT;
+	int tout = DHD_PACKET_TIMEOUT_MS;
 #ifdef HTC_KlocWork
 	memset(&event,0,sizeof(event));
 #endif
@@ -1828,6 +1851,31 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 #endif
 		/* Strip header, count, deliver upward */
 		skb_pull(skb, ETH_HLEN);
+		
+//BRCM WPSAP START
+#ifdef BRCM_WPSAP
+		/* check eap id  */
+		if (ntoh16(skb->protocol) == ETHER_TYPE_802_1X){
+			int plen = 0;
+			printk("@@@ got eap packet start! \n");
+			for(plen = 0; plen<len ; plen++){
+				printk("%02x ",eth[plen]);
+				if((plen + 1 )%8 == 0)
+					printk("\n");
+			}
+			printk("\n");
+			printk("@@@ got eap packet End! \n");
+
+			if(eth[22] == 0x01) {//22:shit to eap identity
+				//send wps start event
+				ASSERT(dhd->iflist[ifidx]->net != NULL);
+
+				if (dhd->iflist[ifidx]->net)
+					wl_iw_send_priv_event(dhd->iflist[ifidx]->net, "WPS_START");
+			}
+		}
+#endif /* BRCM_WPSAP */
+//BRCM WPSAP END
 
 		/* Process special event packets and then discard them */
 		if (ntoh16(skb->protocol) == ETHER_TYPE_BRCM) {
@@ -1841,6 +1889,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 			&data);
 
 			wl_event_to_host_order(&event);
+ 			tout = DHD_EVENT_TIMEOUT_MS;
 			if (event.event_type == WLC_E_BTA_HCI_EVENT) {
 #ifdef HTC_KlocWork
 				if(!data) {
@@ -1849,8 +1898,9 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 				else
 #endif
 				dhd_bta_doevt(dhdp, data, event.datalen);
+			} else if (event.event_type == WLC_E_PFN_NET_FOUND) {
+				tout *= 2;
 			}
-			tout = DHD_EVENT_TIMEOUT;
 		}
 
 		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
@@ -2424,7 +2474,7 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	/* send to dongle only if we are not waiting for reload already */
 	if (dhd->pub.hang_was_sent) {
 		DHD_ERROR(("%s: HANG was sent up earlier\n", __FUNCTION__));
-		DHD_OS_WAKE_LOCK_TIMEOUT_ENABLE(&dhd->pub, DHD_EVENT_TIMEOUT);
+		DHD_OS_WAKE_LOCK_TIMEOUT_ENABLE(&dhd->pub, DHD_EVENT_TIMEOUT_MS);
 		DHD_OS_WAKE_UNLOCK(&dhd->pub);
 		return OSL_ERROR(BCME_DONGLE_DOWN);
 	}
@@ -2593,8 +2643,10 @@ dhd_ioctl_entry(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 #endif /* WLMEDIA_HTSF */
 
-	bcmerror = dhd_wl_ioctl(&dhd->pub, ifidx, (wl_ioctl_t *)&ioc, buf, buflen);
-
+	/* HTC_CSP_START*/
+	if (buf != NULL)
+		bcmerror = dhd_wl_ioctl(&dhd->pub, ifidx, (wl_ioctl_t *)&ioc, buf, buflen);
+	/* HTC_CSP_END*/
 done:
 	dhd_check_hang(net, &dhd->pub, bcmerror);
 
@@ -2660,6 +2712,19 @@ dhd_stop(struct net_device *net)
 	dhd_info_t *dhd = *(dhd_info_t **)netdev_priv(net);
 	DHD_OS_WAKE_LOCK(&dhd->pub);
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
+
+//BRCM APSTA START
+/*
+#ifdef APSTA_CONCURRENT	
+	if (ap_net_dev != NULL)
+	{
+	    DHD_ERROR(("%s: Steve: dhd_stop but AP is ON, just return\n", __FUNCTION__));
+	    return 0;
+	}
+#endif
+*/
+//BRCM APSTA END
+
 	if (dhd->pub.up == 0) {
 		goto exit;
 	}
@@ -2673,11 +2738,26 @@ dhd_stop(struct net_device *net)
 		 * For CFG80211: Clean up all the left over virtual interfaces
 		 * when the primary Interface is brought down. [ifconfig wlan0 down]
 		 */
+#ifndef APSTA_CONCURRENT
 		if ((dhd->dhd_state & DHD_ATTACH_STATE_ADD_IF) &&
 			(dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)) {
 			dhd_cleanup_virt_ifaces(dhd);
 		}
+#else
+		if (ap_net_dev || ((dhd->dhd_state & DHD_ATTACH_STATE_ADD_IF) &&
+			(dhd->dhd_state & DHD_ATTACH_STATE_CFG80211))) {
+#if 0
+			printf("clean interface and free parameters and send AP_DWON");
+			wl_iw_send_priv_event(net, "AP_DOWN");
+#else
+			printf("clean interface and free parameters");
+#endif
+			dhd_cleanup_virt_ifaces(dhd);
+			ap_net_dev = NULL;
+			ap_cfg_running = FALSE;
+		}
 	}
+#endif
 #endif
 
 #ifdef PROP_TXSTATUS
@@ -2838,7 +2918,7 @@ dhd_open(struct net_device *net)
 #endif
 
 	ifidx = dhd_net2idx(dhd, net);
-	DHD_TRACE(("%s: ifidx %d\n", __FUNCTION__, ifidx));
+	printf("%s: ifidx %d\n", __FUNCTION__, ifidx);
 
 #ifdef HTC_KlocWork
 	if (ifidx < 0) {
@@ -3368,11 +3448,14 @@ dhd_bus_start(dhd_pub_t *dhdp)
 		dhd_set_pktfilter(dhdp, 1, ALLOW_IPV6_MULTICAST, 0, "0xffff", "0x3333");
 #endif
 	}
-#else
-	dhdp->pktfilter_count = 1;
+#endif
+	dhdp->pktfilter_count = 4;
 	/* Setup filter to allow only unicast */
 	dhdp->pktfilter[0] = "100 0 0 0 0x01 0x00";
-#endif
+	dhdp->pktfilter[1] = NULL;
+	dhdp->pktfilter[2] = NULL;
+	dhdp->pktfilter[3] = NULL;
+
 #ifdef WRITE_MACADDR
 	dhd_write_macaddr(dhd->pub.mac.octet);
 #endif
@@ -3424,7 +3507,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint power_mode = PM_FAST;
 	uint32 dongle_align = DHD_SDALIGN;
 	uint32 glom = 0;
-	uint bcn_timeout = 4;
+	uint bcn_timeout = 4; //[Broadcom 0423]
 	uint retry_max = 10;
 #if defined(ARP_OFFLOAD_SUPPORT)
 	int arpoe = 0; /* Do not enable ARP offload feature since it has bug */
@@ -3449,12 +3532,16 @@ int ht_wsec_restrict = WLC_HT_TKIP_RESTRICT | WLC_HT_WEP_RESTRICT;
 	uint dhd_roam = 1;
 #endif
 
-#if defined(AP) || defined(WLP2P)
+//BRCM APSTA START
+#if defined(AP) || defined(WLP2P) || defined(APSTA_CONCURRENT)
+//BRCM APSTA END
 	uint32 apsta = 1; /* Enable APSTA mode */
-#endif /* defined(AP) || defined(WLP2P) || defined(DHD_BCM_WIFI_HDMI) */
+#endif /* defined(AP) || defined(WLP2P) || defined(APSTA_CONCURRENT) */
 #ifdef GET_CUSTOM_MAC_ENABLE
 	struct ether_addr ea_addr;
 #endif /* GET_CUSTOM_MAC_ENABLE */
+	uint srl = 15;
+	uint lrl = 15;
 
 	DHD_TRACE(("Enter %s\n", __func__));
 	dhd->op_mode = 0;
@@ -3513,6 +3600,18 @@ int ht_wsec_restrict = WLC_HT_TKIP_RESTRICT | WLC_HT_WEP_RESTRICT;
 #endif /* SET_RANDOM_MAC_SOFTAP */
 
 	DHD_TRACE(("Firmware = %s\n", fw_path));
+#if 1
+//BRCM APSTA START
+#ifdef APSTA_CONCURRENT
+	if (strstr(fw_path, "_apsta") == NULL) {
+		bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
+			if ((ret = dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0)) < 0) {
+				DHD_ERROR(("%s APSTA for apsta_concurrent failed ret= %d\n", __FUNCTION__, ret));
+		}
+	}
+#endif
+//BRCM APSTA END
+#endif
 #if !defined(AP) && defined(WLP2P)
 	/* Check if firmware with WFD support used */
 	if (strstr(fw_path, "_p2p") != NULL) {
@@ -3727,13 +3826,17 @@ int ht_wsec_restrict = WLC_HT_TKIP_RESTRICT | WLC_HT_WEP_RESTRICT;
 
 #ifdef WL_CFG80211
 	setbit(eventmask, WLC_E_ESCAN_RESULT);
-	//if ((dhd->op_mode & WFD_MASK) == WFD_MASK) {
+   #ifdef PRIMOTD_NO_P2P
+	if ((dhd->op_mode & WFD_MASK) == WFD_MASK) {
+   #endif
 		setbit(eventmask, WLC_E_ACTION_FRAME_RX);
 		setbit(eventmask, WLC_E_ACTION_FRAME_COMPLETE);
 		setbit(eventmask, WLC_E_ACTION_FRAME_OFF_CHAN_COMPLETE);
 		setbit(eventmask, WLC_E_P2P_PROBREQ_MSG);
 		setbit(eventmask, WLC_E_P2P_DISC_LISTEN_COMPLETE);
-	//}
+   #ifdef PRIMOTD_NO_P2P
+	}
+   #endif
 #endif /* WL_CFG80211 */
 
 	/* Write updated Event mask */
@@ -3827,6 +3930,10 @@ int ht_wsec_restrict = WLC_HT_TKIP_RESTRICT | WLC_HT_WEP_RESTRICT;
 	ret = 1;
 	bcm_mkiovar("tc_enable", (char *)&ret, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+
+	/* set srl and lrl */
+	dhd_wl_ioctl_cmd(dhd, WLC_SET_SRL, (char *)&srl, sizeof(srl), TRUE, 0);
+	dhd_wl_ioctl_cmd(dhd, WLC_SET_LRL, (char *)&lrl, sizeof(lrl), TRUE, 0);
 /* HTC_CSP_END */
 
 done:
@@ -4746,7 +4853,13 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 		return (bcmerror);
 
 #if defined(CONFIG_WIRELESS_EXT)
-	if (event->bsscfgidx == 0) {
+	if (
+//BRCM APSTA START
+#if defined(APSTA_CONCURRENT) && defined(SOFTAP)
+		!ap_net_dev && 
+#endif
+//BRCM APSTA END
+		event->bsscfgidx == 0) {
 		/*
 		 * Wireless ext is on primary interface only
 		 */
@@ -4758,6 +4871,15 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 			wl_iw_event(dhd->iflist[*ifidx]->net, event, *data);
 		}
 	}
+//BRCM APSTA START
+#if defined(APSTA_CONCURRENT) && defined(SOFTAP)
+	if ( dhd->iflist[*ifidx]->net && (dhd->iflist[*ifidx]->net == ap_net_dev)){
+		wl_iw_event(dhd->iflist[*ifidx]->net, event, *data);
+		printf("%s: don't route event to wl_cfg80211 if the net_dev is ap_net_dev\n", __FUNCTION__);
+		return BCME_OK;
+	}
+#endif
+//BRCM APSTA END
 #endif /* defined(CONFIG_WIRELESS_EXT)  */
 
 #ifdef WL_CFG80211
@@ -4773,7 +4895,8 @@ dhd_wl_host_event(dhd_info_t *dhd, int *ifidx, void *pktdata,
 
 	ASSERT(dhd->iflist[*ifidx] != NULL);
 	ASSERT(dhd->iflist[*ifidx]->net != NULL);
-	if (dhd->iflist[*ifidx]->net) {
+
+	if ((dhd->pub.op_mode == WFD_MASK) || ((*ifidx == 0) && dhd->iflist[*ifidx]->net)) {
 		wl_cfg80211_event(dhd->iflist[*ifidx]->net, event, *data);
 	}
 #endif /* defined(WL_CFG80211) */
@@ -5278,7 +5401,7 @@ int dhd_os_wake_lock_timeout(dhd_pub_t *pub)
 #ifdef CONFIG_HAS_WAKELOCK
 		if (dhd->wakelock_timeout_enable)
 			wake_lock_timeout(&dhd->wl_rxwake,
-				dhd->wakelock_timeout_enable * HZ);
+				msecs_to_jiffies(dhd->wakelock_timeout_enable));
 #endif
 		dhd->wakelock_timeout_enable = 0;
 		spin_unlock_irqrestore(&dhd->wakelock_spinlock, flags);

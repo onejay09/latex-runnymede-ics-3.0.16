@@ -1,3 +1,5 @@
+if !BCMDHD_GOOGLE
+
 config BCMDHD
 	tristate "Broadcom 4329/30 wireless cards support"
 	depends on MMC
@@ -25,3 +27,10 @@ config BCMDHD_NVRAM_PATH
 	default "/proc/calibration"
 	---help---
 	  Path to the calibration file.
+
+config BCMDHD_P2P_INTERFACE
+       depends on BCMDHD
+       bool "Enable this to use a separate interface (p2p0)"
+       default n
+
+endif #!BCMDHD_GOOGLE

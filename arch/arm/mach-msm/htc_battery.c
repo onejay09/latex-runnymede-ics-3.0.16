@@ -133,7 +133,6 @@ struct htc_battery_info {
 static struct msm_rpc_endpoint *endpoint;
 
 static struct htc_battery_info htc_batt_info;
-static int phone_call_flag = 0;
 
 /* Remove cache mechanism to prevent cable status not sync. */
 static unsigned int cache_time;
@@ -494,7 +493,7 @@ static int htc_battery_status_update(u32 curr_level)
 
 	mutex_lock(&htc_batt_info.lock);
 	notify = (htc_batt_info.rep.level != curr_level);
-#if (defined(CONFIG_MACH_POPC))
+#if defined(CONFIG_MACH_POPC) || defined(CONFIG_MACH_SPADE)
 	htc_batt_info.rep.level = 60; /* temporarily fake capacity */
 #else
 	htc_batt_info.rep.level = curr_level;
@@ -639,14 +638,8 @@ static int htc_cable_status_update(int status)
 	 * if receives AC notification */
 	last_source = htc_batt_info.rep.charging_source;
 	if (status == CHARGER_USB && g_usb_online == 0) {
-#ifdef CONFIG_FORCE_FAST_CHARGE
-		BATT_LOG("cable USB forced fast charge");
-		htc_set_smem_cable_type(CHARGER_AC);
-		htc_batt_info.rep.charging_source = CHARGER_AC;
-#else
 		htc_set_smem_cable_type(CHARGER_USB);
 		htc_batt_info.rep.charging_source = CHARGER_USB;
-#endif
 	} else {
 		htc_set_smem_cable_type(status);
 		htc_batt_info.rep.charging_source  = status;
@@ -1366,22 +1359,10 @@ static int htc_rpc_charger_switch(unsigned enable)
 	} req;
 
 	BATT_LOG("%s: switch charger to mode: %u", __func__, enable);
-	if (enable == ENABLE_LIMIT_CHARGER) {
-		#if (!defined(CONFIG_MACH_PRIMOU))
-			ret = tps_set_charger_ctrl(ENABLE_LIMITED_CHG);
-		#else
-			phone_call_flag = PHONE_CALL_IN;
-			BATT_LOG("phone_call_flag:%d\n",phone_call_flag);
-		#endif
-	}
-	else if (enable == DISABLE_LIMIT_CHARGER) {
-		#if (!defined(CONFIG_MACH_PRIMOU))
-			ret = tps_set_charger_ctrl(CLEAR_LIMITED_CHG);
-		#else
-			phone_call_flag = PHONE_CALL_STOP;
-			BATT_LOG("phone_call_flag:%d\n",phone_call_flag);
-		#endif
-	}
+	if (enable == ENABLE_LIMIT_CHARGER)
+		ret = tps_set_charger_ctrl(ENABLE_LIMITED_CHG);
+	else if (enable == DISABLE_LIMIT_CHARGER)
+		ret = tps_set_charger_ctrl(CLEAR_LIMITED_CHG);
 	else {
 		if (htc_batt_info.guage_driver == GUAGE_MODEM) {
 			/* For Mecha, this should be enabled. */
@@ -1393,11 +1374,9 @@ static int htc_rpc_charger_switch(unsigned enable)
 			if (ret < 0)
 				BATT_ERR("%s: msm_rpc_call failed (%d)!", __func__, ret);
 		}
-#if 0
 #if defined(CONFIG_BATTERY_DS2746)
 		if (htc_batt_info.guage_driver == GUAGE_DS2746)
 			ds2746_charger_switch(enable);
-#endif
 #endif
 		power_supply_changed(&htc_power_supplies[CHARGER_BATTERY]);
 	}
@@ -2055,8 +2034,10 @@ int htc_battery_update_change(void)
 	mutex_lock(&htc_batt_info.lock);
 	if (htc_batt_info.rep.charging_enabled != new_batt_info_rep.charging_enabled) {
 		htc_batt_info.rep.charging_enabled = new_batt_info_rep.charging_enabled;
-		if(new_batt_info_rep.charging_enabled > 0)is_send_acusb_uevent = 1;
-		else is_send_batt_uevent = 1;
+		if(new_batt_info_rep.charging_enabled > 0)
+			is_send_acusb_uevent = 1;
+		else
+			is_send_batt_uevent = 1;
 	}
 	if ((htc_batt_info.rep.level != new_batt_info_rep.level) ||
 		(htc_batt_info.rep.batt_temp != new_batt_info_rep.batt_temp)) {
@@ -2156,58 +2137,11 @@ int get_cable_status(void)
 */	return htc_batt_info.rep.charging_source;
 }
 
-static int htc_batt_suspend(struct device *dev)
-{
-	int ret = 0;
-	struct charger_switch_req {
-		struct rpc_request_hdr hdr;
-		uint32_t data;
-	} req;
-
-	/* If we are on battery, reduce our update rate until
-	 * we next resume.*/
-	if (phone_call_flag == PHONE_CALL_IN) {
-	req.data = cpu_to_be32(phone_call_flag);
-	ret = msm_rpc_call(endpoint,
-			HTC_PROCEDURE_CHARGER_SWITCH,
-			&req, sizeof(req), 5 * HZ);
-	BATT_LOG("%s : Phone call in:%d\n", __func__, phone_call_flag);
-	if (ret < 0)
-		BATT_ERR("%s: msm_rpc_call failed (%d)!", __func__, ret);
-	}
-
-	return 0;
-}
-static void htc_batt_resume(struct device *dev)
-{
-	int ret = 0;
-	struct charger_switch_req {
-		struct rpc_request_hdr hdr;
-		uint32_t data;
-	} req;
-
-	if (phone_call_flag == PHONE_CALL_IN) {
-	req.data = cpu_to_be32(PHONE_CALL_STOP);
-	ret = msm_rpc_call(endpoint,
-			HTC_PROCEDURE_CHARGER_SWITCH,
-			&req, sizeof(req), 5 * HZ);
-	BATT_LOG("%s : Phone call stop:%d\n", __func__, phone_call_flag);
-	if (ret < 0)
-		BATT_ERR("%s: msm_rpc_call failed (%d)!", __func__, ret);
-	}
-}
-
-static struct dev_pm_ops htc_batt_pm_ops = {
-       .prepare = htc_batt_suspend,
-       .complete  = htc_batt_resume,
-};
-
 static struct platform_driver htc_battery_driver = {
 	.probe	= htc_battery_probe,
 	.driver	= {
 		.name	= "htc_battery",
 		.owner	= THIS_MODULE,
-		.pm = &htc_batt_pm_ops,
 	},
 };
 

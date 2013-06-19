@@ -1693,18 +1693,6 @@ config MSM8X60_FTM_AUDIO_DEVICES
 	  Enable support audio factory test mode devices.  This is used
 	  in a production line environment.
 
-config HTC_OFFMODE_ALARM
-	bool "Enables HTC offmode alarm."
-	default n
-	help
-	support HTC offmode alarm.
-
-config HTC_QUICKBOOT_OFFMODE_ALARM
-	bool "Support HTC quickboot offmode alarm."
-	default n
-	help
-	support HTC quickboot offmode alarm.
-
 config RTAC
 	bool "MSM8K real-time audio calibration support"
 	default y
@@ -1760,6 +1748,13 @@ config ARCH_MSM_FLASHLIGHT
 	depends on ARCH_MSM
 	help
 	  The flashlight driver is for MSM series.
+
+config ARCH_MSM_FLASHLIGHT_DEATH_RAY
+        bool "Enable high-brightness (death ray) mode"
+        depends on ARCH_MSM_FLASHLIGHT
+        default n
+        help
+          Enables a high-brightness mode for the flash LED. Dangerous
 
 config QSD_AUDIO
 	bool "QSD audio"
@@ -2349,10 +2344,4 @@ config HTC_ACCESSORY_ONEWIRE
         help
           Provides support of HTC one wire protocol driver.
 
-config FORCE_FAST_CHARGE
-        bool "Force AC charge mode at will"
-        default y
-        help
-          A simple sysfs interface to force adapters that
-          are detected as USB to charge as AC.
 endif

@@ -43,9 +43,14 @@ enum charger_control_flag {
 	ENABLE_CHARGER,
 	ENABLE_LIMIT_CHARGER,
 	DISABLE_LIMIT_CHARGER,
-	PHONE_CALL_IN,
-	PHONE_CALL_STOP,
 	END_CHARGER
+};
+/* context event */
+enum batt_context_event {
+	EVENT_TALK_START = 0,
+	EVENT_TALK_STOP,
+	EVENT_NETWORK_SEARCH_START,
+	EVENT_NETWORK_SEARCH_STOP
 };
 
 /* interface function declaration */

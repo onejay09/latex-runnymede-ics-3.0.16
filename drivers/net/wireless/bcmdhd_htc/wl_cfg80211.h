@@ -138,6 +138,7 @@ do {									\
 				 */
 #define WL_FILE_NAME_MAX		256
 #define WL_DWELL_TIME 	200
+#define WL_MED_DWELL_TIME       400
 #define WL_LONG_DWELL_TIME 1000
 #define IFACE_MAX_CNT 		2
 
@@ -449,6 +450,11 @@ struct wl_priv {
 	struct afx_hdl *afx_hdl;
 	struct ap_info *ap_info;
 	struct sta_info *sta_info;
+//BRCM APSTA START
+#ifdef APSTA_CONCURRENT
+	bool apsta_concurrent;
+#endif
+//BRCM APSTA END
 	struct p2p_info *p2p;
 	bool p2p_supported;
 	struct btcoex_info *btcoex_info;

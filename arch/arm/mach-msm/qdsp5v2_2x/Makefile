@@ -1,3 +1,4 @@
+ccflags-y := -O3 -ffast-math -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -fsingle-precision-constant -mtune=cortex-a8 -marm -march=armv7-a -mfpu=neon -ftree-vectorize -mvectorize-with-neon-double -Wframe-larger-than=2048
 obj-y += afe.o audio_interct.o mi2s.o audio_dev_ctl.o voice.o snddev_data.o
 obj-$(CONFIG_MARIMBA_CODEC) += snddev_icodec.o lpa.o
 obj-$(CONFIG_TIMPANI_CODEC) += snddev_icodec.o lpa.o

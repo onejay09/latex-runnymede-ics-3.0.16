@@ -861,7 +861,7 @@ fail:
 	.hw_value = (channel), \
 	.flags = chflags, \
 	.max_antenna_gain = 0, \
-	.max_power = 19, \
+	.max_power = 20, \
 }
 
 static struct ieee80211_channel wl_2ghz_chantable[] = {
@@ -893,7 +893,7 @@ static struct ieee80211_channel wl_2ghz_chantable[] = {
 	.hw_value = (channel), \
 	.flags = chflags, \
 	.max_antenna_gain = 0, \
-	.max_power = 21, \
+	.max_power = 20, \
 }
 
 static struct ieee80211_channel wl_5ghz_nphy_chantable[] = {
